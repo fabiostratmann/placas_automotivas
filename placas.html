@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Placas Automotivas Personalizadas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2canvas para download de imagem -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Logos Base64 para funcionamento 100% offline e sem restrições de CORS no file:/// -->
+    <script src="logos_base64.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;700;800;900&family=Montserrat:wght@500;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .checkered-bg {
+            background-color: #f1f5f9;
+            background-image: linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+                linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+                linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        /* Custom scrollbar para a barra lateral */
+        aside::-webkit-scrollbar {
+            width: 6px;
+        }
+        aside::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        aside::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 4px;
+        }
+        aside::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header Fixo no Topo -->
+    <header class="sticky top-0 z-50 bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between shadow-md flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <!-- Imagem LOGOTOSCANI da pasta / base64 -->
+            <img id="headerLogo" src="LOGOTOSCANI.png" alt="Logo Toscani" class="h-11 w-auto object-contain drop-shadow transition-transform hover:scale-105">
+            <div class="h-8 w-px bg-slate-700 hidden sm:block"></div>
+            <div>
+                <h1 class="font-bold text-base md:text-lg text-white tracking-wide">Gerador de Placas Automotivas</h1>
+                <p class="text-xs text-slate-400">Desenhe, personalize e exporte suas placas infantis em alta resolução</p>
+            </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700/60 shadow-inner">
+            <i class="fa-solid fa-car text-indigo-400"></i>
+            <span>Placas Infantis Personalizadas</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex flex-col lg:flex-row relative">
+
+        <!-- Painel de Configurações (Esquerda) -->
+        <aside class="w-full lg:w-[480px] bg-slate-800 border-r border-slate-700 p-6 space-y-5 flex-shrink-0">
+
+            <!-- 1. Dimensões (Exclusivo em Centímetros) -->
+            <section class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-ruler-combined"></i> 1. Dimensões da Placa
+                    </h2>
+                    <span class="text-xs bg-indigo-900/60 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-700/50 font-medium">
+                        Centímetros (cm)
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Comprimento / Largura (cm)</label>
+                        <input type="number" id="labelWidth" value="20" min="5" max="200" step="0.5"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Altura (cm)</label>
+                        <input type="number" id="labelHeight" value="12" min="3" max="150" step="0.5"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-info-circle text-indigo-400"></i>
+                    A prévia se ajusta automaticamente à tela, acompanhando a rolagem.
+                </p>
+            </section>
+
+            <!-- 2. Informações da Placa -->
+            <section class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+                <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-font"></i> 2. Informações da Placa
+                </h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Nome da Criança</label>
+                        <input type="text" id="childName" value="MATEUS" placeholder="Ex: MATEUS, ENZO, HELENA..."
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Subtítulo / Cidade (Ex: BRASIL)</label>
+                        <input type="text" id="childSub" value="BRASIL" placeholder="Ex: BRASIL, SÃO PAULO, 2024..."
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Formatação da Fonte (Nome até 720px, Subtítulo até 400px) -->
+            <section class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+                <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-text-height"></i> 3. Formatação da Fonte
+                </h2>
+                <div class="space-y-4">
+                    <!-- Família da Fonte -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Estilo da Fonte</label>
+                        <select id="fontFamily"
+                            class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="'Bebas Neue', sans-serif" selected>Bebas Neue (Automotiva / Placa Alta)</option>
+                            <option value="'Inter', sans-serif">Inter (Moderna & Padrão)</option>
+                            <option value="'Montserrat', sans-serif">Montserrat (Marcante & Robusta)</option>
+                            <option value="'Oswald', sans-serif">Oswald (Compacta / Mercosul)</option>
+                            <option value="'Fredoka', cursive">Fredoka (Infantil Divertida)</option>
+                            <option value="Impact, sans-serif">Impact (Clássica Forte)</option>
+                            <option value="Arial, sans-serif">Arial (Simples)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bloco Nome da Criança (até 720px) -->
+                    <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50 space-y-3">
+                        <span class="text-xs font-semibold text-indigo-300 block flex items-center gap-1.5">
+                            <i class="fa-solid fa-child text-xs"></i> Nome da Criança
+                        </span>
+
+                        <!-- Tamanho da Fonte (até 720px com slider e input numérico) -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs text-slate-400">Tamanho da Fonte (até 720px)</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="fontSizeInput" min="16" max="720" value="72"
+                                        class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-right font-mono font-semibold text-indigo-400 focus:outline-none focus:border-indigo-500">
+                                    <span class="text-xs text-slate-500 font-mono">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="fontSize" min="16" max="720" value="72"
+                                class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                                <span>16px</span>
+                                <span>180px</span>
+                                <span>360px</span>
+                                <span>540px</span>
+                                <span>720px</span>
+                            </div>
+                        </div>
+
+                        <!-- Cor da Fonte e Peso -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Cor da Fonte</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="fontColor" value="#0f172a"
+                                        class="w-9 h-9 bg-slate-900 border border-slate-700 rounded-lg p-1 cursor-pointer">
+                                    <input type="text" id="fontColorText" value="#0F172A" maxlength="7"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-indigo-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Espessura (Peso)</label>
+                                <select id="fontWeight"
+                                    class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2 py-2 focus:outline-none focus:border-indigo-500">
+                                    <option value="400">Normal (400)</option>
+                                    <option value="600">Seminegrito (600)</option>
+                                    <option value="700">Negrito (700)</option>
+                                    <option value="900" selected>Extra Negrito (900)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Espaçamento Entre Letras -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs text-slate-400">Espaçamento Entre Letras</label>
+                                <span id="letterSpacingDisplay" class="text-xs font-mono text-indigo-400">4px</span>
+                            </div>
+                            <input type="range" id="letterSpacing" min="0" max="30" value="4"
+                                class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Bloco Subtítulo (até 400px) -->
+                    <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50 space-y-3">
+                        <span class="text-xs font-semibold text-slate-300 block flex items-center gap-1.5">
+                            <i class="fa-solid fa-tag text-xs text-slate-400"></i> Subtítulo (Cidade / País)
+                        </span>
+
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-xs text-slate-400">Tamanho da Fonte (até 400px)</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="subFontSizeInput" min="8" max="400" value="18"
+                                            class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-right font-mono font-semibold text-indigo-400 focus:outline-none focus:border-indigo-500">
+                                        <span class="text-xs text-slate-500 font-mono">px</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="subFontSize" min="8" max="400" value="18"
+                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                                <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                                    <span>8px</span>
+                                    <span>100px</span>
+                                    <span>200px</span>
+                                    <span>300px</span>
+                                    <span>400px</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Cor do Subtítulo</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="subFontColor" value="#0f172a"
+                                        class="w-9 h-9 bg-slate-900 border border-slate-700 rounded-lg p-1 cursor-pointer">
+                                    <input type="text" id="subFontColorText" value="#0F172A" maxlength="7"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-indigo-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Estilo & Moldura -->
+            <section class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+                <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-palette"></i> 4. Estilo & Moldura
+                </h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Tipo de Fundo da Placa</label>
+                        <select id="bgType"
+                            class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="solid" selected>Cor Sólida</option>
+                            <option value="gradient">Degradê (Gradiente)</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Cor Primária (Fundo)</label>
+                            <input type="color" id="bgCor1" value="#ffffff"
+                                class="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg p-1 cursor-pointer">
+                        </div>
+                        <div id="bgCor2Container" style="display: none;">
+                            <label class="block text-xs text-slate-400 mb-1">Cor Secundária (Degradê)</label>
+                            <input type="color" id="bgCor2" value="#f1f5f9"
+                                class="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg p-1 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Configuração da Moldura e Faixa Superior -->
+                    <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50 space-y-3">
+                        <span class="text-xs font-semibold text-indigo-300 block flex items-center gap-1.5">
+                            <i class="fa-solid fa-border-all text-xs"></i> Moldura & Faixa Superior
+                        </span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Cor da Moldura & Faixa</label>
+                                <input type="color" id="borderColor" value="#4f46e5"
+                                    class="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg p-1 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Espessura da Moldura</label>
+                                <input type="number" id="borderWidth" value="4" min="0" max="25"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs text-slate-400">Altura da Faixa Superior (%)</label>
+                                <span id="topBandHeightDisplay" class="text-xs font-mono font-semibold text-indigo-400">22%</span>
+                            </div>
+                            <input type="range" id="topBandHeightPercent" min="12" max="35" value="22"
+                                class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Arredondamento da Borda (px)</label>
+                            <input type="number" id="borderRadius" value="14" min="0" max="60"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </aside>
+
+        <!-- Área de Prévia e Download (Direita) - STICKY PARA DESCER COM A ROLAGEM -->
+        <main class="flex-1 checkered-bg p-4 md:p-6 flex flex-col items-center justify-between relative lg:sticky lg:top-[61px] lg:h-[calc(100vh-61px)] overflow-hidden min-h-[500px]">
+
+            <!-- Barra de Ações Superior -->
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3 bg-slate-800/90 backdrop-blur-md px-5 py-3 rounded-xl border border-slate-700 shadow-xl z-10 w-full max-w-4xl flex-shrink-0">
+                <div class="flex items-center gap-2 text-xs text-slate-300">
+                    <i class="fa-solid fa-magnifying-glass text-indigo-400"></i>
+                    <span class="font-medium">Visualização:</span>
+                    <span id="zoomBadge" class="bg-indigo-900/60 text-indigo-300 px-2 py-0.5 rounded font-mono font-semibold text-xs border border-indigo-700/50">100%</span>
+                    <span class="text-slate-400 text-[11px] hidden sm:inline">(Ajustada automaticamente à tela)</span>
+                </div>
+                <button id="downloadBtn"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-download"></i> <span id="downloadBtnText">Baixar Imagem da Placa (PNG)</span>
+                </button>
+            </div>
+
+            <!-- Área de Visualização com Auto-Fit Responsivo -->
+            <div id="previewViewport" class="flex-1 w-full flex items-center justify-center p-2 relative overflow-hidden min-h-[300px]">
+                <!-- Scaler que recebe a área visual escalada para centralização sem overflow -->
+                <div id="previewScaler" class="relative flex items-center justify-center transition-all duration-150">
+                    <!-- Wrapper unscaled posicionado na origem e escalado via CSS transform -->
+                    <div id="labelWrapper" class="absolute top-0 left-0 shadow-2xl transition-transform duration-150 origin-top-left" style="transform-origin: 0 0;">
+                        
+                        <!-- Canvas da Placa -->
+                        <div id="labelCanvas" class="relative flex flex-col overflow-hidden shadow-2xl"
+                            style="width: 800px; height: 480px; background: #ffffff; border: 4px solid #4f46e5; border-radius: 14px; padding: 0;">
+
+                            <!-- 1. Faixa Superior (Logos fixas: Mercosul, Toscani, Bandeira Brasil) -->
+                            <div id="topBand" class="w-full flex-shrink-0 flex items-center justify-between px-6 transition-all overflow-hidden"
+                                style="height: 105px; background-color: #4f46e5;">
+                                <!-- Slot Esquerda: MERCOSUL.png -->
+                                <div class="w-1/3 h-full flex items-center justify-start overflow-hidden py-1.5">
+                                    <img id="logoMercosul" src="MERCOSUL.png" alt="Mercosul" class="max-h-full max-w-full object-contain drop-shadow-sm select-none">
+                                </div>
+                                <!-- Slot Centro: LOGOTOSCANI.png -->
+                                <div class="w-1/3 h-full flex items-center justify-center overflow-hidden py-1.5">
+                                    <img id="logoToscani" src="LOGOTOSCANI.png" alt="Toscani" class="max-h-full max-w-full object-contain drop-shadow-sm select-none">
+                                </div>
+                                <!-- Slot Direita: BANDEIRABRASIL.png -->
+                                <div class="w-1/3 h-full flex items-center justify-end overflow-hidden py-1.5">
+                                    <img id="logoBrasil" src="BANDEIRABRASIL.png" alt="Brasil" class="max-h-full max-w-full object-contain drop-shadow-sm select-none">
+                                </div>
+                            </div>
+
+                            <!-- 2. Área Central em Branco (Textos centralizados no espaço que sobrou) -->
+                            <div id="plateContent" class="flex-1 w-full flex flex-col items-center justify-center text-center px-4 py-2 overflow-hidden min-h-0">
+                                <h2 id="previewTitle" class="w-full text-center tracking-wider uppercase transition-all select-none break-words"
+                                    style="font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 0.95; font-weight: 900; color: #0f172a; letter-spacing: 4px;">
+                                    MATEUS
+                                </h2>
+                                <p id="previewSub" class="w-full text-center tracking-widest uppercase transition-all mt-1 opacity-85 select-none break-words"
+                                    style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; line-height: 1.1; font-weight: 700; color: #0f172a; letter-spacing: 3px;">
+                                    BRASIL
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rodapé explicativo -->
+            <p class="text-[11px] text-slate-500 mt-2 text-center select-none flex-shrink-0">
+                A placa acompanha a rolagem da página e se redimensiona na tela para que você veja todas as alterações em tempo real.
+            </p>
+        </main>
+
+    </div>
+
+    <!-- JavaScript do Gerador -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar Logos Base64 caso o arquivo logos_base64.js esteja carregado
+            if (typeof MERCOSUL_BASE64 !== 'undefined') {
+                const lM = document.getElementById('logoMercosul');
+                const lT = document.getElementById('logoToscani');
+                const lB = document.getElementById('logoBrasil');
+                const hL = document.getElementById('headerLogo');
+                if (lM) lM.src = MERCOSUL_BASE64;
+                if (lT) lT.src = TOSCANI_BASE64;
+                if (lB) lB.src = BRASIL_BASE64;
+                if (hL) hL.src = TOSCANI_BASE64;
+            }
+
+            // Elementos de Dimensão (Exclusivo Centímetros)
+            const labelWidth = document.getElementById('labelWidth');
+            const labelHeight = document.getElementById('labelHeight');
+
+            // Elementos de Texto da Placa
+            const childName = document.getElementById('childName');
+            const childSub = document.getElementById('childSub');
+
+            // Elementos de Formatação da Fonte
+            const fontFamily = document.getElementById('fontFamily');
+            const fontSize = document.getElementById('fontSize');
+            const fontSizeInput = document.getElementById('fontSizeInput');
+            const fontColor = document.getElementById('fontColor');
+            const fontColorText = document.getElementById('fontColorText');
+            const fontWeight = document.getElementById('fontWeight');
+            const letterSpacing = document.getElementById('letterSpacing');
+            const letterSpacingDisplay = document.getElementById('letterSpacingDisplay');
+
+            const subFontSize = document.getElementById('subFontSize');
+            const subFontSizeInput = document.getElementById('subFontSizeInput');
+            const subFontColor = document.getElementById('subFontColor');
+            const subFontColorText = document.getElementById('subFontColorText');
+
+            // Elementos de Estilo & Fundo
+            const bgType = document.getElementById('bgType');
+            const bgCor1 = document.getElementById('bgCor1');
+            const bgCor2 = document.getElementById('bgCor2');
+            const bgCor2Container = document.getElementById('bgCor2Container');
+            const borderColor = document.getElementById('borderColor');
+            const borderWidth = document.getElementById('borderWidth');
+            const borderRadius = document.getElementById('borderRadius');
+            const topBand = document.getElementById('topBand');
+            const topBandHeightPercent = document.getElementById('topBandHeightPercent');
+            const topBandHeightDisplay = document.getElementById('topBandHeightDisplay');
+
+            // Elementos da Prévia e Viewport
+            const previewViewport = document.getElementById('previewViewport');
+            const previewScaler = document.getElementById('previewScaler');
+            const labelWrapper = document.getElementById('labelWrapper');
+            const labelCanvas = document.getElementById('labelCanvas');
+            const previewTitle = document.getElementById('previewTitle');
+            const previewSub = document.getElementById('previewSub');
+            const zoomBadge = document.getElementById('zoomBadge');
+
+            const downloadBtn = document.getElementById('downloadBtn');
+            const downloadBtnText = document.getElementById('downloadBtnText');
+
+            // Sincronização de Cores Hex / Color Pickers
+            fontColor.addEventListener('input', () => {
+                fontColorText.value = fontColor.value.toUpperCase();
+                updateCanvas();
+            });
+            fontColorText.addEventListener('input', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(fontColorText.value)) {
+                    fontColor.value = fontColorText.value;
+                    updateCanvas();
+                }
+            });
+
+            subFontColor.addEventListener('input', () => {
+                subFontColorText.value = subFontColor.value.toUpperCase();
+                updateCanvas();
+            });
+            subFontColorText.addEventListener('input', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(subFontColorText.value)) {
+                    subFontColor.value = subFontColorText.value;
+                    updateCanvas();
+                }
+            });
+
+            // Sincronização do Tamanho da Fonte do Nome da Criança (Slider e Input até 720px)
+            fontSize.addEventListener('input', () => {
+                fontSizeInput.value = fontSize.value;
+                updateCanvas();
+            });
+            fontSizeInput.addEventListener('input', () => {
+                let val = parseInt(fontSizeInput.value, 10);
+                if (isNaN(val)) val = 16;
+                if (val < 16) val = 16;
+                if (val > 720) val = 720;
+                fontSize.value = val;
+                updateCanvas();
+            });
+
+            // Sincronização do Tamanho da Fonte do Subtítulo (Slider e Input até 400px)
+            subFontSize.addEventListener('input', () => {
+                subFontSizeInput.value = subFontSize.value;
+                updateCanvas();
+            });
+            subFontSizeInput.addEventListener('input', () => {
+                let val = parseInt(subFontSizeInput.value, 10);
+                if (isNaN(val)) val = 8;
+                if (val < 8) val = 8;
+                if (val > 400) val = 400;
+                subFontSize.value = val;
+                updateCanvas();
+            });
+
+            letterSpacing.addEventListener('input', () => {
+                letterSpacingDisplay.textContent = `${letterSpacing.value}px`;
+                updateCanvas();
+            });
+
+            topBandHeightPercent.addEventListener('input', () => {
+                topBandHeightDisplay.textContent = `${topBandHeightPercent.value}%`;
+                updateCanvas();
+            });
+
+            // Tipo de Fundo (Sólido / Degradê)
+            bgType.addEventListener('change', () => {
+                bgCor2Container.style.display = (bgType.value === 'solid') ? 'none' : 'block';
+                updateCanvas();
+            });
+
+            // Ajuste automático de escala para que a placa SEMPRE caiba 100% no viewport
+            function fitPreviewToScreen(displayW, displayH) {
+                if (!previewViewport || !previewScaler || !labelWrapper) return;
+
+                // Margem interna do viewport para manter um respiro visual agradável
+                const availWidth = Math.max(200, previewViewport.clientWidth - 48);
+                const availHeight = Math.max(150, previewViewport.clientHeight - 48);
+
+                // Fator de escala necessário para caber em largura e altura
+                const scaleX = availWidth / displayW;
+                const scaleY = availHeight / displayH;
+
+                // Reduz se for maior que a tela. Se for menor, mantém até 100%
+                let zoom = Math.min(scaleX, scaleY);
+                if (zoom > 1.0) {
+                    zoom = 1.0;
+                }
+
+                // Aplica a escala visual no wrapper sem alterar a integridade dos pixels do canvas interno
+                labelWrapper.style.transform = `scale(${zoom})`;
+                labelWrapper.style.transformOrigin = '0 0';
+
+                // O container scaler recebe o tamanho visual exato reduzido para centralização flex perfeita
+                const scaledWidth = Math.round(displayW * zoom);
+                const scaledHeight = Math.round(displayH * zoom);
+                previewScaler.style.width = `${scaledWidth}px`;
+                previewScaler.style.height = `${scaledHeight}px`;
+
+                if (zoomBadge) {
+                    zoomBadge.textContent = `${Math.round(zoom * 100)}%`;
+                }
+            }
+
+            // Atualizar Tamanho, Estilo, Faixa Superior e Escala do Canvas
+            function updateCanvas() {
+                // Dimensões estritamente em Centímetros (cm)
+                const w = parseFloat(labelWidth.value) || 20;
+                const h = parseFloat(labelHeight.value) || 12;
+
+                // Escala base: 40px por cm
+                const displayW = w * 40;
+                const displayH = h * 40;
+
+                labelCanvas.style.width = `${displayW}px`;
+                labelCanvas.style.height = `${displayH}px`;
+                labelWrapper.style.width = `${displayW}px`;
+                labelWrapper.style.height = `${displayH}px`;
+
+                // 1. Altura da Faixa Superior proporcional à altura da placa
+                const bandPercent = parseInt(topBandHeightPercent.value, 10) || 22;
+                const bandHeightPx = Math.round(displayH * (bandPercent / 100));
+                topBand.style.height = `${bandHeightPx}px`;
+
+                // 2. Cores da Moldura e Faixa Superior (compartilham a mesma cor)
+                const currentBorderColor = borderColor.value;
+                labelCanvas.style.borderColor = currentBorderColor;
+                topBand.style.backgroundColor = currentBorderColor;
+
+                labelCanvas.style.borderWidth = `${borderWidth.value}px`;
+                labelCanvas.style.borderRadius = `${borderRadius.value}px`;
+
+                // 3. Cor de Fundo da Área Inferior
+                if (bgType.value === 'solid') {
+                    labelCanvas.style.background = bgCor1.value;
+                } else {
+                    labelCanvas.style.background = `linear-gradient(135deg, ${bgCor1.value}, ${bgCor2.value})`;
+                }
+
+                // 4. Formatação da Fonte - Nome da Criança (até 720px)
+                const currentFontSize = parseInt(fontSize.value, 10) || 72;
+                previewTitle.textContent = childName.value || 'NOME DA CRIANÇA';
+                previewTitle.style.fontSize = `${currentFontSize}px`;
+                previewTitle.style.color = fontColor.value;
+                previewTitle.style.fontFamily = fontFamily.value;
+                previewTitle.style.fontWeight = fontWeight.value;
+                previewTitle.style.letterSpacing = `${letterSpacing.value}px`;
+
+                // 5. Formatação da Fonte - Subtítulo (até 400px)
+                const currentSubFontSize = parseInt(subFontSize.value, 10) || 18;
+                previewSub.textContent = childSub.value;
+                previewSub.style.fontSize = `${currentSubFontSize}px`;
+                previewSub.style.color = subFontColor.value;
+                previewSub.style.fontFamily = fontFamily.value;
+                const subLetterSpacing = Math.max(1, Math.round(parseInt(letterSpacing.value, 10) * 0.75));
+                previewSub.style.letterSpacing = `${subLetterSpacing}px`;
+
+                // Reajustar o tamanho da prévia para caber 100% no viewport
+                fitPreviewToScreen(displayW, displayH);
+            }
+
+            // Observador de redimensionamento de janela e container
+            window.addEventListener('resize', () => {
+                const w = parseFloat(labelWidth.value) || 20;
+                const h = parseFloat(labelHeight.value) || 12;
+                fitPreviewToScreen(w * 40, h * 40);
+            });
+
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => {
+                    const w = parseFloat(labelWidth.value) || 20;
+                    const h = parseFloat(labelHeight.value) || 12;
+                    fitPreviewToScreen(w * 40, h * 40);
+                });
+                ro.observe(previewViewport);
+            }
+
+            // Eventos de mudança nos campos restantes
+            const inputs = [
+                labelWidth, labelHeight, childName, childSub,
+                fontFamily, fontWeight, bgCor1, bgCor2,
+                borderColor, borderWidth, borderRadius, topBandHeightPercent
+            ];
+
+            inputs.forEach(input => input.addEventListener('input', updateCanvas));
+
+            // Função para resetar estado do botão de download
+            function resetDownloadBtn() {
+                downloadBtn.disabled = false;
+                downloadBtnText.textContent = 'Baixar Imagem da Placa (PNG)';
+                const icon = downloadBtn.querySelector('i');
+                if (icon) icon.className = 'fa-solid fa-download';
+            }
+
+            // Download ROBUSTO em PNG nativo
+            downloadBtn.addEventListener('click', async () => {
+                const origTransform = labelWrapper.style.transform;
+                const origScalerW = previewScaler.style.width;
+                const origScalerH = previewScaler.style.height;
+
+                try {
+                    // Indicação visual de processamento
+                    downloadBtn.disabled = true;
+                    downloadBtnText.textContent = 'Gerando PNG em Alta Resolução...';
+                    const icon = downloadBtn.querySelector('i');
+                    if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
+
+                    // Calcula escala ideal de renderização
+                    const w = parseFloat(labelWidth.value) || 20;
+                    const h = parseFloat(labelHeight.value) || 12;
+                    const displayW = w * 40;
+                    const displayH = h * 40;
+                    const maxDim = Math.max(displayW, displayH);
+
+                    let exportScale = 2;
+                    if (maxDim * exportScale > 3600) {
+                        exportScale = Math.max(1, 3600 / maxDim);
+                    } else if (maxDim < 900) {
+                        exportScale = 3;
+                    }
+
+                    // Renderiza a placa via html2canvas com isolamento no clone
+                    const canvas = await html2canvas(labelCanvas, {
+                        scale: exportScale,
+                        useCORS: false,
+                        allowTaint: true,
+                        backgroundColor: null,
+                        logging: false,
+                        onclone: (clonedDoc) => {
+                            // No clone, reseta o transform para renderizar em 100% da resolução sem afetar a tela
+                            const clonedWrapper = clonedDoc.getElementById('labelWrapper');
+                            if (clonedWrapper) {
+                                clonedWrapper.style.transform = 'none';
+                                clonedWrapper.style.position = 'static';
+                            }
+                            // Remove stylesheets externos para evitar erros de CORS no file:///
+                            const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+                            links.forEach(l => {
+                                if (l.href && l.href.startsWith('http')) {
+                                    l.remove();
+                                }
+                            });
+                        }
+                    });
+
+                    // Sanitização do nome do arquivo
+                    const rawName = (childName.value || 'placa').trim();
+                    const cleanName = rawName
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '') || 'placa';
+                    const fileName = `placa-${cleanName}.png`;
+
+                    // Converte para Blob binário com mime type 'image/png'
+                    if (canvas.toBlob) {
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                fallbackDataUrlDownload(canvas, fileName);
+                                return;
+                            }
+                            const blobUrl = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.style.display = 'none';
+                            link.setAttribute('href', blobUrl);
+                            link.setAttribute('download', fileName);
+                            document.body.appendChild(link);
+                            link.click();
+
+                            setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(blobUrl);
+                                resetDownloadBtn();
+                            }, 1200);
+                        }, 'image/png');
+                    } else {
+                        fallbackDataUrlDownload(canvas, fileName);
+                    }
+
+                } catch (error) {
+                    console.error('Erro na exportação da placa:', error);
+                    alert('Houve um erro ao processar a imagem da placa. Tente reduzir levemente as dimensões e tente novamente.');
+                    resetDownloadBtn();
+                } finally {
+                    // Garante que o preview na tela NUNCA fica deformado
+                    labelWrapper.style.transform = origTransform;
+                    previewScaler.style.width = origScalerW;
+                    previewScaler.style.height = origScalerH;
+                }
+            });
+
+            // Fallback de download caso toBlob não esteja disponível
+            function fallbackDataUrlDownload(canvas, fileName) {
+                try {
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    link.setAttribute('href', dataUrl);
+                    link.setAttribute('download', fileName);
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        resetDownloadBtn();
+                    }, 1200);
+                } catch (e) {
+                    console.error('Erro no fallback de download:', e);
+                    alert('Não foi possível gerar o arquivo de imagem.');
+                    resetDownloadBtn();
+                }
+            }
+
+            // Inicializar e recalcular
+            updateCanvas();
+        });
+    </script>
+
+</body>
+
+</html>
