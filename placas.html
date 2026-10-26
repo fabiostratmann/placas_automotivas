@@ -167,6 +167,7 @@
                                 <span>540px</span>
                                 <span>720px</span>
                             </div>
+                            <p class="text-[10px] text-slate-500 mt-1">O tamanho se ajusta à largura e à altura disponíveis na placa.</p>
                         </div>
 
                         <!-- Cor da Fonte e Peso -->
@@ -353,11 +354,11 @@
 
                             <!-- 2. Área Central em Branco (Textos centralizados no espaço que sobrou) -->
                             <div id="plateContent" class="flex-1 w-full flex flex-col items-center justify-center text-center px-4 py-2 overflow-hidden min-h-0">
-                                <h2 id="previewTitle" class="w-full text-center tracking-wider uppercase transition-all select-none break-words"
+                                <h2 id="previewTitle" class="w-full flex-shrink-0 text-center tracking-wider uppercase select-none break-words"
                                     style="font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 0.95; font-weight: 900; color: #0f172a; letter-spacing: 4px;">
                                     MATEUS
                                 </h2>
-                                <p id="previewSub" class="w-full text-center tracking-widest uppercase transition-all mt-1 opacity-85 select-none break-words"
+                                <p id="previewSub" class="w-full flex-shrink-0 text-center tracking-widest uppercase mt-1 opacity-85 select-none break-words"
                                     style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; line-height: 1.1; font-weight: 700; color: #0f172a; letter-spacing: 3px;">
                                     BRASIL
                                 </p>
@@ -581,6 +582,8 @@
                 previewTitle.style.fontFamily = fontFamily.value;
                 previewTitle.style.fontWeight = fontWeight.value;
                 previewTitle.style.letterSpacing = `${letterSpacing.value}px`;
+                previewTitle.style.whiteSpace = 'nowrap';
+                fitTextToWidth(previewTitle, currentFontSize);
 
                 // 5. Formatação da Fonte - Subtítulo (até 400px)
                 const currentSubFontSize = parseInt(subFontSize.value, 10) || 18;
@@ -590,9 +593,44 @@
                 previewSub.style.fontFamily = fontFamily.value;
                 const subLetterSpacing = Math.max(1, Math.round(parseInt(letterSpacing.value, 10) * 0.75));
                 previewSub.style.letterSpacing = `${subLetterSpacing}px`;
+                previewSub.style.whiteSpace = 'nowrap';
+                fitTextToWidth(previewSub, currentSubFontSize);
+                previewSub.style.marginTop = `${Math.max(12, parseFloat(previewTitle.style.fontSize) * 0.06)}px`;
+                fitTextStackToHeight();
 
                 // Reajustar o tamanho da prévia para caber 100% no viewport
                 fitPreviewToScreen(displayW, displayH);
+            }
+
+            function fitTextStackToHeight() {
+                const contentStyle = window.getComputedStyle(plateContent);
+                const verticalPadding = parseFloat(contentStyle.paddingTop) + parseFloat(contentStyle.paddingBottom);
+                const availableHeight = plateContent.clientHeight - verticalPadding;
+                const titleLineHeight = parseFloat(window.getComputedStyle(previewTitle).lineHeight);
+                const subLineHeight = parseFloat(window.getComputedStyle(previewSub).lineHeight);
+                const subMarginTop = parseFloat(window.getComputedStyle(previewSub).marginTop);
+                const textStackHeight = titleLineHeight + subLineHeight + subMarginTop;
+                const maxTextStackHeight = Math.max(0, availableHeight - 24);
+
+                if (textStackHeight > maxTextStackHeight) {
+                    const scale = maxTextStackHeight / textStackHeight;
+                    previewTitle.style.fontSize = `${parseFloat(previewTitle.style.fontSize) * scale}px`;
+                    previewSub.style.fontSize = `${parseFloat(previewSub.style.fontSize) * scale}px`;
+                }
+            }
+
+            function fitTextToWidth(element, fontSize) {
+                element.style.fontSize = `${fontSize}px`;
+                const availableWidth = element.clientWidth;
+                const textWidth = element.scrollWidth;
+                if (availableWidth > 0 && textWidth > availableWidth) {
+                    let fittedSize = fontSize * availableWidth / textWidth;
+                    element.style.fontSize = `${fittedSize}px`;
+                    for (let attempt = 0; attempt < 3 && element.scrollWidth > availableWidth; attempt++) {
+                        fittedSize *= availableWidth / element.scrollWidth;
+                        element.style.fontSize = `${fittedSize * 0.99}px`;
+                    }
+                }
             }
 
             // Observador de redimensionamento de janela e container
@@ -628,12 +666,10 @@
                 if (icon) icon.className = 'fa-solid fa-download';
             }
 
+            const fontsReady = document.fonts.ready.then(updateCanvas);
+
             // Download ROBUSTO em PNG nativo
             downloadBtn.addEventListener('click', async () => {
-                const origTransform = labelWrapper.style.transform;
-                const origScalerW = previewScaler.style.width;
-                const origScalerH = previewScaler.style.height;
-
                 try {
                     // Indicação visual de processamento
                     downloadBtn.disabled = true;
@@ -642,11 +678,9 @@
                     if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
 
                     // Calcula escala ideal de renderização
-                    const w = parseFloat(labelWidth.value) || 20;
-                    const h = parseFloat(labelHeight.value) || 12;
-                    const displayW = w * 40;
-                    const displayH = h * 40;
-                    const maxDim = Math.max(displayW, displayH);
+                    const maxDim = Math.max(labelCanvas.offsetWidth, labelCanvas.offsetHeight);
+
+                    await fontsReady;
 
                     let exportScale = 2;
                     if (maxDim * exportScale > 3600) {
@@ -655,7 +689,7 @@
                         exportScale = 3;
                     }
 
-                    // Renderiza a placa via html2canvas com isolamento no clone
+                    // Renderiza a placa fora dos wrappers escalados usados apenas pela prévia.
                     const canvas = await html2canvas(labelCanvas, {
                         scale: exportScale,
                         useCORS: false,
@@ -663,16 +697,29 @@
                         backgroundColor: null,
                         logging: false,
                         onclone: (clonedDoc) => {
-                            // No clone, reseta o transform para renderizar em 100% da resolução sem afetar a tela
-                            const clonedWrapper = clonedDoc.getElementById('labelWrapper');
-                            if (clonedWrapper) {
-                                clonedWrapper.style.transform = 'none';
-                                clonedWrapper.style.position = 'static';
+                            const clonedCanvas = clonedDoc.getElementById('labelCanvas');
+                            if (clonedCanvas) {
+                                clonedDoc.body.appendChild(clonedCanvas);
+                                clonedCanvas.style.position = 'fixed';
+                                clonedCanvas.style.top = '0';
+                                clonedCanvas.style.left = '0';
+                                clonedCanvas.style.transform = 'none';
                             }
-                            // Remove stylesheets externos para evitar erros de CORS no file:///
+                            const clonedTitle = clonedDoc.getElementById('previewTitle');
+                            const clonedSub = clonedDoc.getElementById('previewSub');
+                            if (clonedTitle) {
+                                clonedTitle.style.whiteSpace = 'nowrap';
+                                clonedTitle.style.transform = 'translateY(-0.5em)';
+                            }
+                            if (clonedSub) {
+                                clonedSub.style.whiteSpace = 'nowrap';
+                                clonedSub.style.transform = 'translateY(-0.5em)';
+                            }
+
+                            // Keep Google Fonts available in the export, but omit unrelated external stylesheets.
                             const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
                             links.forEach(l => {
-                                if (l.href && l.href.startsWith('http')) {
+                                if (l.href && l.href.startsWith('http') && !l.href.startsWith('https://fonts.googleapis.com/')) {
                                     l.remove();
                                 }
                             });
@@ -719,11 +766,6 @@
                     console.error('Erro na exportação da placa:', error);
                     alert('Houve um erro ao processar a imagem da placa. Tente reduzir levemente as dimensões e tente novamente.');
                     resetDownloadBtn();
-                } finally {
-                    // Garante que o preview na tela NUNCA fica deformado
-                    labelWrapper.style.transform = origTransform;
-                    previewScaler.style.width = origScalerW;
-                    previewScaler.style.height = origScalerH;
                 }
             });
 
